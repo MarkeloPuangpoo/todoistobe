@@ -19,36 +19,38 @@ export function SettingsBar() {
     }
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md px-2 py-1.5 rounded-full border border-slate-200/60 dark:border-zinc-700/60 shadow-sm">
             {/* Language Toggle */}
-            <div className="flex items-center bg-slate-100 dark:bg-zinc-800 rounded-lg p-1 border border-slate-200 dark:border-zinc-700">
+            <div className="flex items-center bg-slate-100/50 dark:bg-zinc-900/50 rounded-full p-0.5 border border-slate-200/50 dark:border-zinc-700/50">
                 <button
                     onClick={() => setLocale('en')}
-                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${locale === 'en'
-                            ? 'bg-white dark:bg-zinc-600 text-slate-800 dark:text-zinc-100 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400'
+                    className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${locale === 'en'
+                        ? 'bg-white dark:bg-zinc-700 text-slate-800 dark:text-zinc-100 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 dark:text-zinc-500 hover:dark:text-zinc-300'
                         }`}
                 >
                     EN
                 </button>
                 <button
                     onClick={() => setLocale('th')}
-                    className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${locale === 'th'
-                            ? 'bg-white dark:bg-zinc-600 text-slate-800 dark:text-zinc-100 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700 dark:text-zinc-400'
+                    className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all ${locale === 'th'
+                        ? 'bg-white dark:bg-zinc-700 text-slate-800 dark:text-zinc-100 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700 dark:text-zinc-500 hover:dark:text-zinc-300'
                         }`}
                 >
                     TH
                 </button>
             </div>
 
+            <div className="w-px h-4 bg-slate-200 dark:bg-zinc-700" />
+
             {/* Theme Toggle */}
             <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-100 transition-colors"
             >
                 <span className="sr-only">Toggle theme</span>
-                {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+                {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
             </button>
         </div>
     );

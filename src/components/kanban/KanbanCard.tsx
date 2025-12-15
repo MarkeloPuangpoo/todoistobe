@@ -27,6 +27,10 @@ export function KanbanCard({ task, onDelete }: KanbanCardProps) {
             type: 'Task',
             task,
         },
+        transition: {
+            duration: 150, // Faster transition for snappier feel
+            easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+        },
     });
 
     const style = {
@@ -34,10 +38,10 @@ export function KanbanCard({ task, onDelete }: KanbanCardProps) {
         transition,
     };
 
-    const priorityColor = {
-        High: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-900',
-        Medium: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-900',
-        Low: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-900',
+    const priorityStyles = {
+        High: 'bg-orange-50 text-orange-700 border-orange-100/50 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-500/20',
+        Medium: 'bg-yellow-50 text-yellow-700 border-yellow-100/50 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-500/20',
+        Low: 'bg-emerald-50 text-emerald-700 border-emerald-100/50 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-500/20',
     }[task.priority];
 
     return (
@@ -47,43 +51,46 @@ export function KanbanCard({ task, onDelete }: KanbanCardProps) {
             {...attributes}
             {...listeners}
             className={twMerge(
-                'group relative flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-slate-300 hover:shadow-md active:cursor-grabbing dark:bg-zinc-800 dark:border-zinc-700 dark:hover:border-zinc-600',
-                isDragging && 'opacity-50 ring-2 ring-slate-400 ring-offset-2 dark:ring-zinc-600'
+                'group relative flex flex-col gap-2.5 rounded-lg border border-slate-200/60 bg-white p-3.5 shadow-sm transition-all hover:border-slate-300 hover:shadow-md active:cursor-grabbing',
+                'dark:bg-zinc-900 dark:border-zinc-800 dark:hover:border-zinc-700 dark:shadow-none',
+                isDragging && 'opacity-60 ring-2 ring-indigo-500/20 rotate-2 dark:ring-indigo-400/20'
             )}
         >
             <div className="flex items-start justify-between">
                 <span
                     className={clsx(
-                        'rounded-full px-2.5 py-0.5 text-xs font-medium border',
-                        priorityColor
+                        'rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border',
+                        priorityStyles
                     )}
                 >
                     {t(`task.priority.${task.priority.toLowerCase()}`)}
                 </span>
                 <button
                     onClick={(e) => {
-                        e.stopPropagation(); // Prevent drag start when clicking delete
+                        e.stopPropagation();
                         onDelete(task.id);
                     }}
-                    className="opacity-0 transition-opacity group-hover:opacity-100 text-slate-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400"
+                    className="opacity-0 transition-all group-hover:opacity-100 text-slate-400 hover:text-red-500 hover:bg-slate-50 p-1 rounded dark:text-zinc-600 dark:hover:text-red-400 dark:hover:bg-zinc-800"
                 >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                 </button>
             </div>
 
-            <div>
-                <h3 className="text-sm font-semibold text-slate-700 dark:text-zinc-100">{task.title}</h3>
+            <div className="space-y-1">
+                <h3 className="text-[13px] font-medium leading-tight text-slate-700 dark:text-zinc-200">
+                    {task.title}
+                </h3>
                 {task.description && (
-                    <p className="mt-1 text-xs text-slate-500 line-clamp-2 dark:text-zinc-400">
+                    <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed dark:text-zinc-500">
                         {task.description}
                     </p>
                 )}
             </div>
 
             {task.dueDate && (
-                <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1 dark:text-zinc-500">
-                    <Calendar size={14} />
-                    <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 mt-0.5 dark:text-zinc-600">
+                    <Calendar size={12} />
+                    <span>{new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                 </div>
             )}
         </div>
