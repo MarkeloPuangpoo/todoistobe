@@ -175,7 +175,7 @@ export function KanbanBoard() {
 
                 <button
                     onClick={handleShareClick}
-                    className="flexItems glass-button flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md text-xs font-medium transition-colors dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 border border-transparent"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md text-xs font-medium transition-colors dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
                     title="Share Board"
                 >
                     <Share2 size={14} />
@@ -183,7 +183,7 @@ export function KanbanBoard() {
                 </button>
                 <button
                     onClick={handleImportClick}
-                    className="glass-button flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-md text-xs font-medium transition-colors dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700"
+                    className="glass-button flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md text-xs font-medium transition-colors border border-border"
                     title="Import Board"
                 >
                     <CloudDownload size={14} />
@@ -192,7 +192,7 @@ export function KanbanBoard() {
 
                 <button
                     onClick={() => signOut()}
-                    className="glass-button flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md text-xs font-medium transition-colors dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/30 border border-red-100 dark:border-red-900/50"
+                    className="glass-button flex items-center gap-1.5 px-3 py-1.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-md text-xs font-medium transition-colors border border-destructive/20"
                     title="Sign Out"
                 >
                     <LogOut size={14} />
