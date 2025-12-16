@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Task, Column, Priority } from '@/types/kanban';
 
@@ -155,6 +155,74 @@ export function useKanbanData() {
         updateTask(taskId, { columnId: newColumnId, position: newPosition });
     }
 
+    const importBoardData = async (importedData: { tasks: Task[], columns: Column[] }) => {
+        if (!boardId) return;
+        setLoading(true);
+
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('No user found');
+
+            // 1. ลบข้อมูลเก่าทั้งหมดใน Board นี้
+            await supabase.from('tasks').delete().eq('board_id', boardId);
+            await supabase.from('columns').delete().eq('board_id', boardId);
+
+            // 2. สร้าง Map เพื่อจับคู่ ID เก่า -> ID ใหม่ (สำหรับ Column)
+            const columnIdMap = new Map<string, string>();
+
+            // 3. Insert Columns ใหม่ทีละอัน เพื่อเอา ID ใหม่มาใช้
+            // (ต้องเรียงตาม position เพื่อความสวยงาม)
+            const sortedColumns = importedData.columns.sort((a, b) => (a.position || 0) - (b.position || 0));
+
+            for (const col of sortedColumns) {
+                const { data: newCol } = await supabase
+                    .from('columns')
+                    .insert({
+                        board_id: boardId,
+                        user_id: user.id,
+                        title: col.title,
+                        position: col.position
+                    })
+                    .select()
+                    .single();
+
+                if (newCol) {
+                    columnIdMap.set(col.id, newCol.id);
+                }
+            }
+
+            // 4. เตรียมข้อมูล Tasks ใหม่ โดยเปลี่ยน column_id ให้ตรงกับที่สร้างใหม่
+            const newTasksPayload = importedData.tasks.map(t => {
+                const newColumnId = columnIdMap.get(t.columnId);
+                if (!newColumnId) return null; // ข้ามถ้าหา column ไม่เจอ (กันเหนียว)
+
+                return {
+                    board_id: boardId,
+                    user_id: user.id,
+                    column_id: newColumnId,
+                    title: t.title,
+                    description: t.description || '',
+                    priority: t.priority,
+                    position: t.position
+                };
+            }).filter(t => t !== null);
+
+            // 5. Insert Tasks
+            if (newTasksPayload.length > 0) {
+                await supabase.from('tasks').insert(newTasksPayload);
+            }
+
+            // 6. โหลดข้อมูลใหม่ขึ้นมาแสดงผล
+            await fetchBoardData();
+
+        } catch (error) {
+            console.error('Import failed:', error);
+            // อาจจะเพิ่ม logic แจ้งเตือน error
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return {
         tasks,
         columns,
@@ -164,6 +232,7 @@ export function useKanbanData() {
         deleteTask,
         moveTask,
         setTasks,
-        setColumns
+        setColumns,
+        importBoardData
     };
 }

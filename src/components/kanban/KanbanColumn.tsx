@@ -39,7 +39,7 @@ export function KanbanColumn({ column, tasks, onAddTask, onDeleteTask }: KanbanC
     return (
         <div
             ref={setNodeRef}
-            className="flex flex-col h-full w-[350px] min-w-[350px] rounded-2xl bg-secondary/50 border border-border/50 shadow-sm"
+            className="flex flex-col h-full w-[85vw] md:w-[350px] min-w-[300px] md:min-w-[350px] rounded-2xl bg-secondary/50 border border-border/50 shadow-sm"
         >
             {/* Header */}
             <div className="flex items-center justify-between p-4 pb-2">

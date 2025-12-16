@@ -25,7 +25,7 @@ import LogoutButton from '../LogoutButton';
 
 export function KanbanBoard() {
     const { user, signOut } = useAuth();
-    const { tasks, columns, addTask, updateTask, deleteTask, setTasks, loading } = useKanbanData();
+    const { tasks, columns, addTask, updateTask, deleteTask, setTasks, loading, importBoardData } = useKanbanData();
 
     // UI Local State
     const [mounted, setMounted] = useState(false);
@@ -194,23 +194,27 @@ export function KanbanBoard() {
                 <LogoutButton />
             </div>
 
-            <div className="flex h-full w-full gap-4 overflow-x-auto p-4 md:p-8 pt-6">
+            <div className="flex h-full w-full gap-4 overflow-x-auto p-4 md:p-8 pt-6 snap-x snap-mandatory scroll-pl-4 scroll-smooth">
                 <DndContext
                     id="kanban-board"
                     sensors={sensors}
                     onDragStart={onDragStart}
                     onDragOver={onDragOver}
                     onDragEnd={onDragEnd}
+                    autoScroll={{
+                        acceleration: 0 // Linear scrolling (smoother)
+                    }}
                 >
                     <div className="flex gap-4 min-h-0 h-full">
                         {columns.map((col) => (
-                            <KanbanColumn
-                                key={col.id}
-                                column={col}
-                                tasks={tasks.filter((t) => t.columnId === col.id)}
-                                onAddTask={addTask}
-                                onDeleteTask={deleteTask}
-                            />
+                            <div key={col.id} className="snap-center shrink-0">
+                                <KanbanColumn
+                                    column={col}
+                                    tasks={tasks.filter((t) => t.columnId === col.id)}
+                                    onAddTask={addTask}
+                                    onDeleteTask={deleteTask}
+                                />
+                            </div>
                         ))}
                     </div>
 
@@ -229,7 +233,10 @@ export function KanbanBoard() {
                 initialMode={shareModalMode}
                 tasks={tasks}
                 columns={columns}
-                onImportSuccess={() => { }} // TODO: Handle import to Supabase?
+                onImportSuccess={async (data) => {
+                    await importBoardData(data);
+                    window.location.reload();
+                }}
             />
         </div>
     );
