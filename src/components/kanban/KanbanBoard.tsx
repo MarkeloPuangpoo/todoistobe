@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     DndContext,
     DragEndEvent,
@@ -9,7 +9,6 @@ import {
     DragStartEvent,
     MouseSensor,
     TouchSensor,
-    UniqueIdentifier,
     useSensor,
     useSensors,
 } from '@dnd-kit/core';
@@ -18,6 +17,9 @@ import { createPortal } from 'react-dom';
 import { Column, Priority, Task } from '@/types/kanban';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
+import { Share2, Download, CloudDownload } from 'lucide-react';
+import { shareBoardData, getSharedData } from '@/app/actions/share';
+import { ShareImportModal } from './ShareImportModal';
 
 const defaultColumns: Column[] = [
     { id: 'todo', title: 'To Do' },
@@ -50,9 +52,67 @@ const defaultTasks: Task[] = [
 ];
 
 export function KanbanBoard() {
-    const [columns] = useState<Column[]>(defaultColumns);
+    // Lazy initialize from localStorage to avoid hydration mismatch while supporting persistence
+    const [mounted, setMounted] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    // We start with defaults for SSR match, then useEffect loads real data
+    const [columns, setColumns] = useState<Column[]>(defaultColumns);
     const [tasks, setTasks] = useState<Task[]>(defaultTasks);
     const [activeTask, setActiveTask] = useState<Task | null>(null);
+
+    // NEW: Modal State
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [shareModalMode, setShareModalMode] = useState<'share' | 'import'>('share');
+
+    // Initial load from localStorage
+    useEffect(() => {
+        setMounted(true);
+        // Only load if localStorage has data, otherwise keep defaults
+        const savedTasks = localStorage.getItem('kanban-tasks');
+        const savedColumns = localStorage.getItem('kanban-columns');
+
+        if (savedTasks) {
+            try {
+                setTasks(JSON.parse(savedTasks));
+            } catch (e) {
+                console.error('Failed to parse tasks', e);
+            }
+        }
+
+        if (savedColumns) {
+            try {
+                setColumns(JSON.parse(savedColumns));
+            } catch (e) {
+                console.error('Failed to parse columns', e);
+            }
+        }
+        setIsLoaded(true);
+    }, []);
+
+    // Save to localStorage whenever state changes
+    useEffect(() => {
+        if (!isLoaded) return;
+        localStorage.setItem('kanban-tasks', JSON.stringify(tasks));
+        localStorage.setItem('kanban-columns', JSON.stringify(columns));
+    }, [tasks, columns, isLoaded]);
+
+    const handleShareClick = () => {
+        setShareModalMode('share');
+        setIsShareModalOpen(true);
+    };
+
+    const handleImportClick = () => {
+        setShareModalMode('import');
+        setIsShareModalOpen(true);
+    };
+
+    const handleImportSuccess = (data: { tasks: Task[]; columns?: Column[] }) => {
+        setTasks(data.tasks);
+        if (data.columns) {
+            setColumns(data.columns);
+        }
+    };
 
     const sensors = useSensors(
         useSensor(MouseSensor, {
@@ -118,7 +178,7 @@ export function KanbanBoard() {
                     const newTasks = [...tasks];
                     newTasks[activeIndex] = { ...activeTask, columnId: String(overId) };
                     // Move to the end of the column if dropping on the column itself
-                    return arrayMove(newTasks, activeIndex, newTasks.length - 1); // This logic might need refinement for arbitrary position but works for simple switch
+                    return arrayMove(newTasks, activeIndex, newTasks.length - 1);
                 }
                 return tasks;
             });
@@ -127,9 +187,6 @@ export function KanbanBoard() {
 
     const onDragEnd = (event: DragEndEvent) => {
         setActiveTask(null);
-
-        // Final reorder validation could happen here if needed, but onDragOver handles visual updates
-        // For arrays already moved in onDragOver, we just need to settle
     };
 
     const handleAddTask = (columnId: string, title: string, priority: Priority) => {
@@ -147,41 +204,66 @@ export function KanbanBoard() {
         setTasks(tasks.filter((t) => t.id !== id));
     };
 
-    const [mounted, setMounted] = useState(false);
-
-    React.useEffect(() => {
-        setMounted(true);
-    }, []);
-
     return (
-        <div className="flex h-full w-full gap-4 overflow-x-auto p-4 md:p-8">
-            <DndContext
-                id="kanban-board"
-                sensors={sensors}
-                onDragStart={onDragStart}
-                onDragOver={onDragOver}
-                onDragEnd={onDragEnd}
-            >
-                <div className="flex gap-4 min-h-0 h-full">
-                    {columns.map((col) => (
-                        <KanbanColumn
-                            key={col.id}
-                            column={col}
-                            tasks={tasks.filter((t) => t.columnId === col.id)}
-                            onAddTask={handleAddTask}
-                            onDeleteTask={handleDeleteTask}
-                        />
-                    ))}
-                </div>
+        <div className="flex flex-col h-full w-full">
+            {/* Toolbar */}
+            <div className="flex items-center justify-end px-8 pt-4 pb-0 gap-2">
+                <button
+                    onClick={handleShareClick}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md text-xs font-medium transition-colors dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+                    title="Share Board"
+                >
+                    <Share2 size={14} />
+                    <span>Share</span>
+                </button>
+                <button
+                    onClick={handleImportClick}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-md text-xs font-medium transition-colors dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                    title="Import Board"
+                >
+                    <CloudDownload size={14} />
+                    <span>Import</span>
+                </button>
+            </div>
 
-                {/* Portal for the dragged overlay task to ensure it's on top */}
-                {mounted && createPortal(
-                    <DragOverlay>
-                        {activeTask && <KanbanCard task={activeTask} onDelete={() => { }} />}
-                    </DragOverlay>,
-                    document.body
-                )}
-            </DndContext>
+            <div className="flex h-full w-full gap-4 overflow-x-auto p-4 md:p-8 pt-2">
+                <DndContext
+                    id="kanban-board"
+                    sensors={sensors}
+                    onDragStart={onDragStart}
+                    onDragOver={onDragOver}
+                    onDragEnd={onDragEnd}
+                >
+                    <div className="flex gap-4 min-h-0 h-full">
+                        {columns.map((col) => (
+                            <KanbanColumn
+                                key={col.id}
+                                column={col}
+                                tasks={tasks.filter((t) => t.columnId === col.id)}
+                                onAddTask={handleAddTask}
+                                onDeleteTask={handleDeleteTask}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Portal for the dragged overlay task to ensure it's on top */}
+                    {mounted && createPortal(
+                        <DragOverlay>
+                            {activeTask && <KanbanCard task={activeTask} onDelete={() => { }} />}
+                        </DragOverlay>,
+                        document.body
+                    )}
+                </DndContext>
+            </div>
+
+            <ShareImportModal
+                isOpen={isShareModalOpen}
+                onClose={() => setIsShareModalOpen(false)}
+                initialMode={shareModalMode}
+                tasks={tasks}
+                columns={columns}
+                onImportSuccess={handleImportSuccess}
+            />
         </div>
     );
 }

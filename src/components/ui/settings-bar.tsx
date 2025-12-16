@@ -6,8 +6,8 @@ import { useTheme } from 'next-themes';
 import { useLanguage } from '@/contexts/language-context';
 
 export function SettingsBar() {
-    const { setTheme, theme } = useTheme();
-    const { locale, setLocale, t } = useLanguage();
+    const { setTheme, resolvedTheme } = useTheme();
+    const { locale, setLocale } = useLanguage();
     const [mounted, setMounted] = React.useState(false);
 
     React.useEffect(() => {
@@ -17,6 +17,14 @@ export function SettingsBar() {
     if (!mounted) {
         return <div className="w-20" />; // Prevent hydration mismatch
     }
+
+    const toggleTheme = () => {
+        if (resolvedTheme === 'dark') {
+            setTheme('light');
+        } else {
+            setTheme('dark');
+        }
+    };
 
     return (
         <div className="flex items-center gap-3 bg-white/80 dark:bg-zinc-800/80 backdrop-blur-md px-2 py-1.5 rounded-full border border-slate-200/60 dark:border-zinc-700/60 shadow-sm">
@@ -46,11 +54,11 @@ export function SettingsBar() {
 
             {/* Theme Toggle */}
             <button
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={toggleTheme}
                 className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-100 transition-colors"
             >
                 <span className="sr-only">Toggle theme</span>
-                {theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+                {resolvedTheme === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
             </button>
         </div>
     );
