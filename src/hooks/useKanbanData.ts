@@ -1,76 +1,158 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Task, Column, Priority } from '@/types/kanban';
-import { useSession } from 'next-auth/react';
-import { nanoid } from 'nanoid';
 
-const defaultColumns: Column[] = [
-    { id: 'todo', title: 'To Do', position: 0 },
-    { id: 'in-progress', title: 'In Progress', position: 1 },
-    { id: 'done', title: 'Done', position: 2 },
-];
-
-const defaultTasks: Task[] = [
-    {
-        id: '1',
-        columnId: 'todo',
-        title: 'Welcome to TaskFlow',
-        description: 'This is a demo board since Supabase is not fully connected yet.',
-        priority: 'High',
-        createdAt: new Date().toISOString(),
-        position: 0
-    },
-    {
-        id: '2',
-        columnId: 'in-progress',
-        title: 'Try dragging this task',
-        priority: 'Medium',
-        createdAt: new Date().toISOString(),
-        position: 0
-    }
-];
+// ไม่ใช้ next-auth แล้ว ใช้ Supabase Auth โดยตรงเพื่อให้เข้ากับ RLS
+// import { useSession } from 'next-auth/react'; 
 
 export function useKanbanData() {
-    const { data: session, status } = useSession();
+    const supabase = createClient();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [columns, setColumns] = useState<Column[]>([]);
     const [loading, setLoading] = useState(true);
-
-    // TEMPORARY: Use local storage to simulate "per user" data if possible, or just memory
-    // User requested "Supabase" but since logic is severed, we fallback to Local Memory driven by defaults.
+    const [boardId, setBoardId] = useState<string | null>(null);
 
     useEffect(() => {
-        if (status === 'loading') return;
+        const fetchBoardData = async () => {
+            setLoading(true);
 
-        // Start with default data immediately so it's not black/empty
-        setColumns(defaultColumns);
-        setTasks(defaultTasks);
-        setLoading(false);
+            // 1. เช็ค User ปัจจุบัน
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                setLoading(false);
+                return;
+            }
 
-    }, [status]);
+            // 2. หา Board ของ User คนนี้ (ถ้าไม่มีให้สร้างใหม่)
+            let currentBoardId = null;
+            const { data: boards } = await supabase.from('boards').select('id').eq('user_id', user.id).limit(1);
+
+            if (boards && boards.length > 0) {
+                currentBoardId = boards[0].id;
+            } else {
+                // สร้าง Board ใหม่ถ้ายังไม่มี
+                const { data: newBoard, error: createError } = await supabase
+                    .from('boards')
+                    .insert([{ user_id: user.id, title: 'My Board' }])
+                    .select()
+                    .single();
+
+                if (newBoard) {
+                    currentBoardId = newBoard.id;
+                    // สร้าง Columns เริ่มต้น
+                    const defaultCols = [
+                        { board_id: newBoard.id, user_id: user.id, title: 'To Do', position: 0 },
+                        { board_id: newBoard.id, user_id: user.id, title: 'In Progress', position: 1 },
+                        { board_id: newBoard.id, user_id: user.id, title: 'Done', position: 2 }
+                    ];
+                    await supabase.from('columns').insert(defaultCols);
+                }
+            }
+
+            setBoardId(currentBoardId);
+
+            if (currentBoardId) {
+                // 3. ดึง Columns
+                const { data: fetchedColumns } = await supabase
+                    .from('columns')
+                    .select('*')
+                    .eq('board_id', currentBoardId)
+                    .order('position');
+
+                if (fetchedColumns) setColumns(fetchedColumns);
+
+                // 4. ดึง Tasks
+                const { data: fetchedTasks } = await supabase
+                    .from('tasks')
+                    .select('*')
+                    .eq('board_id', currentBoardId)
+                    .order('position');
+
+                // แปลง field จาก snake_case (DB) เป็น camelCase (Frontend)
+                if (fetchedTasks) {
+                    const formattedTasks: Task[] = fetchedTasks.map(t => ({
+                        id: t.id,
+                        columnId: t.column_id,
+                        title: t.title,
+                        description: t.description,
+                        priority: t.priority as Priority,
+                        createdAt: t.created_at,
+                        position: t.position
+                    }));
+                    setTasks(formattedTasks);
+                }
+            }
+            setLoading(false);
+        };
+
+        fetchBoardData();
+    }, []);
 
     const addTask = async (columnId: string, title: string, priority: Priority) => {
-        const newTask: Task = {
-            id: nanoid(),
-            columnId,
+        if (!boardId) return;
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const newPosition = tasks.filter(t => t.columnId === columnId).length;
+
+        const newTaskPayload = {
+            board_id: boardId,
+            column_id: columnId,
+            user_id: user.id,
             title,
             priority,
-            createdAt: new Date().toISOString(),
-            position: tasks.filter(t => t.columnId === columnId).length
+            position: newPosition,
+            description: ''
         };
-        setTasks(prev => [...prev, newTask]);
+
+        // ส่งเข้า DB
+        const { data, error } = await supabase.from('tasks').insert([newTaskPayload]).select().single();
+
+        if (error) {
+            console.error("Error adding task:", error);
+            return;
+        }
+
+        if (data) {
+            // อัปเดตหน้าจอ
+            const newTask: Task = {
+                id: data.id,
+                columnId: data.column_id,
+                title: data.title,
+                priority: data.priority as Priority,
+                createdAt: data.created_at,
+                position: data.position,
+                description: data.description
+            };
+            setTasks(prev => [...prev, newTask]);
+        }
     }
 
     const updateTask = async (taskId: string, updates: Partial<Task>) => {
+        // Optimistic update (อัปเดตหน้าจอก่อน)
         setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
+
+        const dbUpdates: any = {};
+        if (updates.title) dbUpdates.title = updates.title;
+        if (updates.priority) dbUpdates.priority = updates.priority;
+        if (updates.columnId) dbUpdates.column_id = updates.columnId;
+        if (updates.description) dbUpdates.description = updates.description;
+        if (typeof updates.position === 'number') dbUpdates.position = updates.position;
+
+        const { error } = await supabase.from('tasks').update(dbUpdates).eq('id', taskId);
+        if (error) console.error("Error updating task:", error);
     }
 
     const deleteTask = async (taskId: string) => {
         setTasks(prev => prev.filter(t => t.id !== taskId));
+        const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+        if (error) console.error("Error deleting task:", error);
     }
 
     const moveTask = async (taskId: string, newColumnId: string) => {
-        updateTask(taskId, { columnId: newColumnId });
+        const newPosition = tasks.filter(t => t.columnId === newColumnId).length;
+        updateTask(taskId, { columnId: newColumnId, position: newPosition });
     }
 
     return {

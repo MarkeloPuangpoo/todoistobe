@@ -39,9 +39,9 @@ export function KanbanCard({ task, onDelete }: KanbanCardProps) {
     };
 
     const priorityStyles = {
-        High: 'bg-orange-50 text-orange-700 border-orange-100/50 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-500/20',
-        Medium: 'bg-yellow-50 text-yellow-700 border-yellow-100/50 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-500/20',
-        Low: 'bg-emerald-50 text-emerald-700 border-emerald-100/50 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-500/20',
+        High: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-200/50 dark:border-rose-500/20 hover:bg-rose-500/25',
+        Medium: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-200/50 dark:border-amber-500/20 hover:bg-amber-500/25',
+        Low: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-500/20 hover:bg-emerald-500/25',
     }[task.priority];
 
     return (
@@ -51,9 +51,9 @@ export function KanbanCard({ task, onDelete }: KanbanCardProps) {
             {...attributes}
             {...listeners}
             className={twMerge(
-                'group relative flex flex-col gap-2.5 rounded-lg border border-slate-200/60 bg-white p-3.5 shadow-sm transition-all hover:border-slate-300 hover:shadow-md active:cursor-grabbing',
-                'dark:bg-zinc-900 dark:border-zinc-800 dark:hover:border-zinc-700 dark:shadow-none',
-                isDragging && 'opacity-60 ring-2 ring-indigo-500/20 rotate-2 dark:ring-indigo-400/20'
+                'group relative flex flex-col gap-2.5 rounded-lg border border-border/60 bg-card p-3.5 shadow-sm transition-all hover:border-foreground/20 hover:shadow-md active:cursor-grabbing',
+                'text-card-foreground',
+                isDragging && 'opacity-60 ring-2 ring-primary/20 rotate-2'
             )}
         >
             <div className="flex items-start justify-between">
@@ -70,25 +70,25 @@ export function KanbanCard({ task, onDelete }: KanbanCardProps) {
                         e.stopPropagation();
                         onDelete(task.id);
                     }}
-                    className="opacity-0 transition-all group-hover:opacity-100 text-slate-400 hover:text-red-500 hover:bg-slate-50 p-1 rounded dark:text-zinc-600 dark:hover:text-red-400 dark:hover:bg-zinc-800"
+                    className="opacity-0 transition-all group-hover:opacity-100 text-muted-foreground hover:text-destructive hover:bg-muted p-1 rounded"
                 >
                     <Trash2 size={14} />
                 </button>
             </div>
 
             <div className="space-y-1">
-                <h3 className="text-[13px] font-medium leading-tight text-slate-700 dark:text-zinc-200">
+                <h3 className="text-[13px] font-medium leading-tight text-card-foreground">
                     {task.title}
                 </h3>
                 {task.description && (
-                    <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed dark:text-zinc-500">
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
                         {task.description}
                     </p>
                 )}
             </div>
 
             {task.dueDate && (
-                <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 mt-0.5 dark:text-zinc-600">
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground mt-0.5">
                     <Calendar size={12} />
                     <span>{new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                 </div>

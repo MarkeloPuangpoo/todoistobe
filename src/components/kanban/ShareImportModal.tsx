@@ -122,18 +122,18 @@ export function ShareImportModal({
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200">
             <div
-                className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden animate-in zoom-in-95 duration-200"
+                className="relative w-full max-w-md bg-background rounded-2xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header / Tabs */}
-                <div className="flex items-center justify-between p-2 border-b border-zinc-100 dark:border-zinc-800/50">
-                    <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl w-full max-w-[240px]">
+                <div className="flex items-center justify-between p-2 border-b border-border/50">
+                    <div className="flex p-1 bg-muted rounded-xl w-full max-w-[240px]">
                         <button
                             onClick={() => { setMode('share'); resetState(); }}
                             disabled={isConfirming}
                             className={`flex-1 flex items-center justify-center gap-2 px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${mode === 'share'
-                                ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm'
-                                : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
                                 } ${isConfirming ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <Share2 size={14} />
@@ -143,8 +143,8 @@ export function ShareImportModal({
                             onClick={() => { setMode('import'); resetState(); }}
                             disabled={isConfirming}
                             className={`flex-1 flex items-center justify-center gap-2 px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${mode === 'import'
-                                ? 'bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm'
-                                : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                ? 'bg-background text-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
                                 } ${isConfirming ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <Download size={14} />
@@ -153,7 +153,7 @@ export function ShareImportModal({
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        className="p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted transition-colors"
                     >
                         <X size={18} />
                     </button>
@@ -164,10 +164,10 @@ export function ShareImportModal({
                     {mode === 'share' ? (
                         <div className="flex flex-col items-center text-center space-y-6">
                             <div className="space-y-2">
-                                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                                <h3 className="text-lg font-semibold text-foreground">
                                     Share this Board
                                 </h3>
-                                <p className="text-sm text-zinc-500 max-w-[280px]">
+                                <p className="text-sm text-muted-foreground max-w-[280px]">
                                     Generate a temporary code to share your current board state with others.
                                 </p>
                             </div>
@@ -176,21 +176,21 @@ export function ShareImportModal({
                                 <div className="w-full space-y-4 animate-in slide-in-from-bottom-2 duration-300">
                                     <div
                                         onClick={handleCopy}
-                                        className="group relative flex items-center justify-center h-20 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 cursor-pointer transition-all duration-200"
+                                        className="group relative flex items-center justify-center h-20 bg-muted/50 rounded-xl border-2 border-dashed border-border hover:border-indigo-500 dark:hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 cursor-pointer transition-all duration-200"
                                     >
-                                        <span className="text-3xl font-mono font-bold tracking-wider text-zinc-800 dark:text-zinc-100 group-hover:scale-105 transition-transform">
+                                        <span className="text-3xl font-mono font-bold tracking-wider text-foreground group-hover:scale-105 transition-transform">
                                             {shareCode}
                                         </span>
                                         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} className="text-zinc-400" />}
+                                            {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} className="text-muted-foreground" />}
                                         </div>
                                     </div>
-                                    <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                                    <p className="text-xs text-muted-foreground">
                                         Code expires in 30 minutes
                                     </p>
                                     <button
                                         onClick={handleCopy}
-                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-medium hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/10"
+                                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/10"
                                     >
                                         {copied ? 'Copied!' : 'Copy Code'}
                                     </button>
@@ -199,16 +199,16 @@ export function ShareImportModal({
                                 <button
                                     onClick={handleGenerateCode}
                                     disabled={isLoading}
-                                    className="group relative w-full h-32 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-zinc-800 dark:to-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl hover:shadow-md transition-all duration-200"
+                                    className="group relative w-full h-32 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-muted/50 to-muted/80 border border-border rounded-xl hover:shadow-md transition-all duration-200"
                                 >
                                     {isLoading ? (
                                         <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
                                     ) : (
                                         <>
-                                            <div className="p-3 bg-white dark:bg-zinc-700 rounded-full shadow-sm group-hover:scale-110 transition-transform duration-200">
+                                            <div className="p-3 bg-background rounded-full shadow-sm group-hover:scale-110 transition-transform duration-200">
                                                 <Share2 className="w-6 h-6 text-indigo-500" />
                                             </div>
-                                            <span className="font-medium text-zinc-700 dark:text-zinc-300">Generate New Code</span>
+                                            <span className="font-medium text-muted-foreground group-hover:text-foreground transition-colors">Generate New Code</span>
                                         </>
                                     )}
                                 </button>
@@ -242,7 +242,7 @@ export function ShareImportModal({
                                 <div className="flex gap-3">
                                     <button
                                         onClick={handleBackFromConfirm}
-                                        className="flex-1 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-xl font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                                        className="flex-1 py-3 bg-muted text-muted-foreground rounded-xl font-medium hover:bg-muted/80 transition-colors"
                                     >
                                         Cancel
                                     </button>
@@ -259,10 +259,10 @@ export function ShareImportModal({
                     ) : (
                         <div className="flex flex-col space-y-6 animate-in slide-in-from-left-4 duration-300">
                             <div className="text-center space-y-2">
-                                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                                <h3 className="text-lg font-semibold text-foreground">
                                     Import Board
                                 </h3>
-                                <p className="text-sm text-zinc-500">
+                                <p className="text-sm text-muted-foreground">
                                     Enter a 6-character code to import a board configuration.
                                 </p>
                             </div>
@@ -275,7 +275,7 @@ export function ShareImportModal({
                                         value={importCode}
                                         onChange={(e) => setImportCode(e.target.value.toUpperCase())}
                                         placeholder="ENTER CODE"
-                                        className="w-full text-center text-2xl font-mono font-bold tracking-[0.5em] py-4 bg-zinc-50 dark:bg-zinc-800/50 border-2 border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 placeholder:text-zinc-300 dark:placeholder:text-zinc-700 transition-all uppercase"
+                                        className="w-full text-center text-2xl font-mono font-bold tracking-[0.5em] py-4 bg-muted/50 border-2 border-border rounded-xl focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 placeholder:text-muted-foreground/50 transition-all uppercase"
                                     />
                                     {error && (
                                         <p className="mt-2 text-xs text-center text-rose-500 font-medium animate-in slide-in-from-top-1">

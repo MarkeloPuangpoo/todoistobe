@@ -21,6 +21,7 @@ import { Share2, Download, CloudDownload, LogOut, Loader2 } from 'lucide-react';
 import { ShareImportModal } from './ShareImportModal';
 import { useKanbanData } from '@/hooks/useKanbanData';
 import { useAuth } from '@/contexts/auth-context';
+import LogoutButton from '../LogoutButton';
 
 export function KanbanBoard() {
     const { user, signOut } = useAuth();
@@ -190,14 +191,7 @@ export function KanbanBoard() {
                     <span>Import</span>
                 </button>
 
-                <button
-                    onClick={() => signOut()}
-                    className="glass-button flex items-center gap-1.5 px-3 py-1.5 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-md text-xs font-medium transition-colors border border-destructive/20"
-                    title="Sign Out"
-                >
-                    <LogOut size={14} />
-                    <span>Logout</span>
-                </button>
+                <LogoutButton />
             </div>
 
             <div className="flex h-full w-full gap-4 overflow-x-auto p-4 md:p-8 pt-6">
