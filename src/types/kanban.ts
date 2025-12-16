@@ -7,9 +7,12 @@ export type Task = {
   description?: string;
   priority: Priority;
   dueDate?: string; // ISO String
+  createdAt?: string;
+  position?: number;
 };
 
 export type Column = {
   id: string;
   title: string;
+  position?: number;
 };

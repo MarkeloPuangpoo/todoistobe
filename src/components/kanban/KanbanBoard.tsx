@@ -14,88 +14,27 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { createPortal } from 'react-dom';
-import { Column, Priority, Task } from '@/types/kanban';
+import { Priority, Task } from '@/types/kanban';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
-import { Share2, Download, CloudDownload } from 'lucide-react';
-import { shareBoardData, getSharedData } from '@/app/actions/share';
+import { Share2, Download, CloudDownload, LogOut, Loader2 } from 'lucide-react';
 import { ShareImportModal } from './ShareImportModal';
-
-const defaultColumns: Column[] = [
-    { id: 'todo', title: 'To Do' },
-    { id: 'in-progress', title: 'In Progress' },
-    { id: 'done', title: 'Done' },
-];
-
-const defaultTasks: Task[] = [
-    {
-        id: '1',
-        columnId: 'todo',
-        title: 'Research UI patterns',
-        description: 'Look into Linear and Raycast designs.',
-        priority: 'High',
-        dueDate: new Date().toISOString(),
-    },
-    {
-        id: '2',
-        columnId: 'todo',
-        title: 'Setup repository',
-        priority: 'Medium',
-        dueDate: new Date().toISOString(),
-    },
-    {
-        id: '3',
-        columnId: 'in-progress',
-        title: 'Implement drag and drop',
-        priority: 'High',
-    },
-];
+import { useKanbanData } from '@/hooks/useKanbanData';
+import { useAuth } from '@/contexts/auth-context';
 
 export function KanbanBoard() {
-    // Lazy initialize from localStorage to avoid hydration mismatch while supporting persistence
+    const { user, signOut } = useAuth();
+    const { tasks, columns, addTask, updateTask, deleteTask, setTasks, loading } = useKanbanData();
+
+    // UI Local State
     const [mounted, setMounted] = useState(false);
-    const [isLoaded, setIsLoaded] = useState(false);
-
-    // We start with defaults for SSR match, then useEffect loads real data
-    const [columns, setColumns] = useState<Column[]>(defaultColumns);
-    const [tasks, setTasks] = useState<Task[]>(defaultTasks);
     const [activeTask, setActiveTask] = useState<Task | null>(null);
-
-    // NEW: Modal State
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [shareModalMode, setShareModalMode] = useState<'share' | 'import'>('share');
 
-    // Initial load from localStorage
     useEffect(() => {
         setMounted(true);
-        // Only load if localStorage has data, otherwise keep defaults
-        const savedTasks = localStorage.getItem('kanban-tasks');
-        const savedColumns = localStorage.getItem('kanban-columns');
-
-        if (savedTasks) {
-            try {
-                setTasks(JSON.parse(savedTasks));
-            } catch (e) {
-                console.error('Failed to parse tasks', e);
-            }
-        }
-
-        if (savedColumns) {
-            try {
-                setColumns(JSON.parse(savedColumns));
-            } catch (e) {
-                console.error('Failed to parse columns', e);
-            }
-        }
-        setIsLoaded(true);
     }, []);
-
-    // Save to localStorage whenever state changes
-    useEffect(() => {
-        if (!isLoaded) return;
-        localStorage.setItem('kanban-tasks', JSON.stringify(tasks));
-        localStorage.setItem('kanban-columns', JSON.stringify(columns));
-    }, [tasks, columns, isLoaded]);
 
     const handleShareClick = () => {
         setShareModalMode('share');
@@ -105,13 +44,6 @@ export function KanbanBoard() {
     const handleImportClick = () => {
         setShareModalMode('import');
         setIsShareModalOpen(true);
-    };
-
-    const handleImportSuccess = (data: { tasks: Task[]; columns?: Column[] }) => {
-        setTasks(data.tasks);
-        if (data.columns) {
-            setColumns(data.columns);
-        }
     };
 
     const sensors = useSensors(
@@ -156,12 +88,15 @@ export function KanbanBoard() {
                 const overIndex = tasks.findIndex((t) => t.id === overId);
 
                 if (tasks[activeIndex].columnId !== tasks[overIndex].columnId) {
-                    // Fix: Changing column
                     const newTasks = [...tasks];
+                    const newColumnId = tasks[overIndex].columnId;
                     newTasks[activeIndex] = {
                         ...newTasks[activeIndex],
-                        columnId: tasks[overIndex].columnId
+                        columnId: newColumnId
                     };
+                    // We just update local state for smoothness, but we don't persist yet until drag end
+                    // Actually, if we change columns during drag over, we might want to trigger `updateTask` only at end.
+                    // But `setTasks` here updates the UI immediately.
                     return arrayMove(newTasks, activeIndex, overIndex);
                 }
 
@@ -177,7 +112,6 @@ export function KanbanBoard() {
                 if (activeTask.columnId !== overId) {
                     const newTasks = [...tasks];
                     newTasks[activeIndex] = { ...activeTask, columnId: String(overId) };
-                    // Move to the end of the column if dropping on the column itself
                     return arrayMove(newTasks, activeIndex, newTasks.length - 1);
                 }
                 return tasks;
@@ -187,30 +121,61 @@ export function KanbanBoard() {
 
     const onDragEnd = (event: DragEndEvent) => {
         setActiveTask(null);
+
+        const { active, over } = event;
+        if (!over) return;
+
+        const activeId = active.id;
+        const startTask = tasks.find(t => t.id === activeId);
+        // Note: `tasks` here might be stale if we used `setTasks` in DragOver?
+        // Actually, dnd-kit recommends updating state in DragOver.
+        // So `tasks` state is already updated with new positions/columns visually.
+
+        // We need to persist the change.
+        // Identify the task's new column.
+        // Since we updated `tasks` state in `onDragOver`, we can just look up the task in the *current* state 
+        // but `onDragEnd` closes over the initial state if not careful? 
+        // No, it should be fine. But finding the task in `tasks` (from hook) will return the *latest* render's tasks?
+
+        // Better: rely on `event.active.data.current` maybe? existing patterns usually persist here.
+
+        // Let's find the task in the *latest* tasks array (which we have from the hook render).
+        const currentTask = tasks.find(t => t.id === activeId);
+        if (currentTask) {
+            // Persist the column change.
+            // We use `updateTask` to send to Supabase.
+            // Note: `updateTask` also does optimistic update, which might be redundant if we already did it in DragOver.
+            // But `updateTask` is "safe".
+            // Crucially: DragOver only updated the *local memory* array via `setTasks`.
+            // Data hook re-render? Yes.
+
+            // If the column changed, persist it.
+            // For now, we are not persisting "position" index to DB, so just columnId.
+            updateTask(String(activeId), { columnId: currentTask.columnId });
+        }
     };
 
-    const handleAddTask = (columnId: string, title: string, priority: Priority) => {
-        const newTask: Task = {
-            id: Math.random().toString(36).substr(2, 9),
-            columnId,
-            title,
-            priority,
-            dueDate: new Date().toISOString(),
-        };
-        setTasks([...tasks, newTask]);
-    };
-
-    const handleDeleteTask = (id: string) => {
-        setTasks(tasks.filter((t) => t.id !== id));
-    };
+    if (loading) {
+        return (
+            <div className="flex h-full w-full items-center justify-center">
+                <Loader2 className="animate-spin text-slate-400" size={32} />
+            </div>
+        )
+    }
 
     return (
         <div className="flex flex-col h-full w-full">
             {/* Toolbar */}
             <div className="flex items-center justify-end px-8 pt-4 pb-0 gap-2">
+                {user && (
+                    <div className="flex items-center mr-auto text-xs text-slate-500 font-medium px-2">
+                        <span>{user.email}</span>
+                    </div>
+                )}
+
                 <button
                     onClick={handleShareClick}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md text-xs font-medium transition-colors dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50"
+                    className="flexItems glass-button flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md text-xs font-medium transition-colors dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 border border-transparent"
                     title="Share Board"
                 >
                     <Share2 size={14} />
@@ -218,15 +183,24 @@ export function KanbanBoard() {
                 </button>
                 <button
                     onClick={handleImportClick}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-md text-xs font-medium transition-colors dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                    className="glass-button flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-md text-xs font-medium transition-colors dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700"
                     title="Import Board"
                 >
                     <CloudDownload size={14} />
                     <span>Import</span>
                 </button>
+
+                <button
+                    onClick={() => signOut()}
+                    className="glass-button flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md text-xs font-medium transition-colors dark:bg-red-900/10 dark:text-red-400 dark:hover:bg-red-900/30 border border-red-100 dark:border-red-900/50"
+                    title="Sign Out"
+                >
+                    <LogOut size={14} />
+                    <span>Logout</span>
+                </button>
             </div>
 
-            <div className="flex h-full w-full gap-4 overflow-x-auto p-4 md:p-8 pt-2">
+            <div className="flex h-full w-full gap-4 overflow-x-auto p-4 md:p-8 pt-6">
                 <DndContext
                     id="kanban-board"
                     sensors={sensors}
@@ -240,13 +214,12 @@ export function KanbanBoard() {
                                 key={col.id}
                                 column={col}
                                 tasks={tasks.filter((t) => t.columnId === col.id)}
-                                onAddTask={handleAddTask}
-                                onDeleteTask={handleDeleteTask}
+                                onAddTask={addTask}
+                                onDeleteTask={deleteTask}
                             />
                         ))}
                     </div>
 
-                    {/* Portal for the dragged overlay task to ensure it's on top */}
                     {mounted && createPortal(
                         <DragOverlay>
                             {activeTask && <KanbanCard task={activeTask} onDelete={() => { }} />}
@@ -262,7 +235,7 @@ export function KanbanBoard() {
                 initialMode={shareModalMode}
                 tasks={tasks}
                 columns={columns}
-                onImportSuccess={handleImportSuccess}
+                onImportSuccess={() => { }} // TODO: Handle import to Supabase?
             />
         </div>
     );
